@@ -107,6 +107,7 @@
 
 ~~~~~~Venom 8.7
 *Upated to latest official LineageOS/Boeffla Sources as of 07.30.17, 01.26 EST
-*GPU overclock to 600 mhz max now
-*More to come soon
+*Added Intellithermal (thanks to Faux123)
+*Fixed Camera
+
 
