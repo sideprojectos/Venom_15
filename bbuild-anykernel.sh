@@ -10,9 +10,9 @@
 # Parameters to be configured manually
 #######################################
 
-BOEFFLA_VERSION="LOS-8.7_SM-G900*kltexxx"
+BOEFFLA_VERSION="LOS-8.9_SM-G900*"
 
-TOOLCHAIN="/opt/toolchains/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-"
+TOOLCHAIN="/opt/toolchains/4.9-linaro-master/bin/arm-linux-androideabi-"
 ARCHITECTURE=arm
 COMPILER_FLAGS_KERNEL="-Wno-maybe-uninitialized -Wno-array-bounds"
 COMPILER_FLAGS_MODULE="-Wno-maybe-uninitialized -Wno-array-bounds"
@@ -25,7 +25,7 @@ MODULES_IN_SYSTEM="y"
 OUTPUT_FOLDER="output"
 
 DEFCONFIG="boeffla_Venom_defconfig"
-DEFCONFIG_VARIANT="boeffla_defconfig_variant"
+DEFCONFIG_VARIANT="boeffla_defconfig_kltespr"
 
 KERNEL_NAME="Boeffla-Kernel"
 

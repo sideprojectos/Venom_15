@@ -19,7 +19,7 @@ KERNEL_SPECS="g900f;cm;cm14.0;http://kernel.boeffla.de/sgs5/boeffla-kernel-cm/;b
 # (1=enable-busybox,2=enable-frandom,3=wipe-cache,4=disable-zram-control)
 # (5=enable-default-zram-control,6=enable-selinux-switch, 7=enable-selinux-control)
 # (8=no-hotplugging,9=enable-doze-control)
-KERNEL_FEATURES="-1-3-4-6-7-9-"
+KERNEL_FEATURES="-1-3-4-5-6-7-9-"
 
 # path to kernel libraries
 LIBPATH="/system/lib/modules"
@@ -1078,7 +1078,7 @@ if [ "apply_system_tweaks" == "$1" ]; then
 		busybox sync
 	fi
 
-	if [ "Venom tweaks" == "$2" ]; then
+	if [ "Boeffla tweaks" == "$2" ]; then
 		echo "70" > /proc/sys/vm/dirty_background_ratio
 		echo "250" > /proc/sys/vm/dirty_expire_centisecs
 		echo "90" > /proc/sys/vm/dirty_ratio
@@ -1153,6 +1153,7 @@ fi
 #	busybox swapoff /dev/block/vnswap0
 #	busybox sync
 #	busybox sleep 0.2s
+#
 #	if [ "1" == "$2" ]; then
 #		echo "$4" > /sys/block/vnswap0/disksize
 #		busybox mkswap /dev/block/vnswap0

@@ -66,8 +66,9 @@
 #include <linux/msm_tsens.h>
 #endif /* defined(CONFIG_THERMAL_TSENS8974)... */
 
-// #define ENABLE_INPUTBOOSTER			// ZZ: enable/disable inputbooster support
+#define ENABLE_INPUTBOOSTER			// ZZ: enable/disable inputbooster support
 // #define ENABLE_WORK_RESTARTLOOP		// ZZ: enable/disable restart loop for touchboost (DO NOT ENABLE IN THIS VERSION -> NOT STABLE YET!)
+
 
 #ifdef ENABLE_INPUTBOOSTER
 #include <linux/slab.h>
@@ -75,16 +76,16 @@
 #endif /* ENABLE_INPUTBOOSTER */
 
 // Yank: enable/disable sysfs interface to display current zzmoove version
-#define ZZMOOVE_VERSION "develop"
+#define ZZMOOVE_VERSION "develop-24.09.15"
 
 // ZZ: support for 2,4,6 or 8 cores (this will enable/disable hotplug threshold tuneables and limit hotplug max limit tuneable)
 #define MAX_CORES					(4)
 
 // ZZ: enable/disable hotplug support
-// #define ENABLE_HOTPLUGGING
+#define ENABLE_HOTPLUGGING
 
 // ZZ: enable support for native hotplugging on snapdragon platform
-// #define SNAP_NATIVE_HOTPLUGGING
+#define SNAP_NATIVE_HOTPLUGGING
 
 // ZZ: enable for sources with backported cpufreq implementation of 3.10 kernel
 // #define CPU_IDLE_TIME_IN_CPUFREQ
@@ -179,7 +180,7 @@ static char custom_profile[20] = "custom";			// ZZ: name to show in sysfs if any
 #define DEF_SCALING_BLOCK_TEMP				(0)	// ZZ: default cpu temperature threshold in °C
 #endif /* CONFIG_EXYNOS4_EXPORT_TEMP */
 #ifdef ENABLE_SNAP_THERMAL_SUPPORT				// ff: snapdragon temperature tripping defaults
-#define DEF_SCALING_TRIP_TEMP				(0)	// ff: default trip cpu temp (default would be 60 but disabled by here because of issues on some systems
+#define DEF_SCALING_TRIP_TEMP				(60)	// ff: default trip cpu temp
 #define DEF_TMU_CHECK_DELAY				(2500)	// ZZ: default delay for snapdragon thermal tripping
 #define DEF_TMU_CHECK_DELAY_SLEEP			(10000)	// ZZ: default delay for snapdragon thermal tripping at sleep
 #endif /* ENABLE_SNAP_THERMAL_SUPPORT */
@@ -6117,13 +6118,6 @@ static inline int set_profile(int profile_num)
 		    dbs_tuners_ins.scaling_block_temp = zzmoove_profiles[i].scaling_block_temp;
 		}
 #endif /* CONFIG_EXYNOS4_EXPORT_TEMP */
-#ifdef ENABLE_SNAP_THERMAL_SUPPORT
-		// ZZ: set scaling_trip_temp value
-		if ((zzmoove_profiles[i].scaling_trip_temp >= 40 && zzmoove_profiles[i].scaling_trip_temp <= 69)
-		    || zzmoove_profiles[i].scaling_trip_temp == 0) {
-		    dbs_tuners_ins.scaling_trip_temp = zzmoove_profiles[i].scaling_trip_temp;
-		}
-#endif /* ENABLE_SNAP_THERMAL_SUPPORT */
 		// ZZ: set scaling_block_freq value
 		if (zzmoove_profiles[i].scaling_block_freq == 0) {
 		    dbs_tuners_ins.scaling_block_freq = zzmoove_profiles[i].scaling_block_freq;
@@ -8791,7 +8785,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	struct cpu_dbs_info_s *this_dbs_info;
 	unsigned int j;
 	int rc;
-#ifdef ENABLE_HOTPLUGGING
+#if defined(ENABLE_HOTPLUGGING) && !defined(SNAP_NATIVE_HOTPLUGGING)
 	int i = 0;
 #endif /* ENABLE_HOTPLUGGING */
 	this_dbs_info = &per_cpu(cs_cpu_dbs_info, cpu);
@@ -8837,14 +8831,14 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		    freq_init_count = 0;					// ZZ: reset init flag for governor reload
 		    system_freq_table = cpufreq_frequency_get_table(0);		// ZZ: update static system frequency table
 		    evaluate_scaling_order_limit_range(1, 0, 0, policy->min, policy->max);	// ZZ: table order detection and limit optimizations
-#ifdef ENABLE_HOTPLUGGING
-			// ZZ: save default values in threshold array
-			for (i = 0; i < possible_cpus; i++) {
-			    hotplug_thresholds[0][i] = DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG;
-			    hotplug_thresholds[1][i] = DEF_FREQUENCY_DOWN_THRESHOLD_HOTPLUG;
-			}
-#endif /* ENABLE_HOTPLUGGING */
 		}
+#if defined(ENABLE_HOTPLUGGING) && !defined(SNAP_NATIVE_HOTPLUGGING)
+		// ZZ: save default values in threshold array
+		for (i = 0; i < possible_cpus; i++) {
+		    hotplug_thresholds[0][i] = DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG;
+		    hotplug_thresholds[1][i] = DEF_FREQUENCY_DOWN_THRESHOLD_HOTPLUG;
+		}
+#endif /* ENABLE_HOTPLUGGING */
 		mutex_init(&this_dbs_info->timer_mutex);
 		dbs_enable++;
 		/*
@@ -8955,8 +8949,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			input_unregister_handler(&interactive_input_handler);
 #endif /* ENABLE_INPUTBOOST */
 #ifdef ENABLE_SNAP_THERMAL_SUPPORT
-		    if (dbs_tuners_ins.scaling_trip_temp > 0)
-			cancel_delayed_work(&work_tmu_check);				// ZZ: cancel cpu temperature reading when leaving the governor
+		    cancel_delayed_work(&work_tmu_check);				// ZZ: cancel cpu temperature reading when leaving the governor
 #endif /* ENABLE_SNAP_THERMAL_SUPPORT */
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
 		    dbs_tuners_ins.disable_sleep_mode = DEF_DISABLE_SLEEP_MODE;
