@@ -116,10 +116,15 @@
 *Added Intellithermal V.2 (thanks to Faux123 and SunilPaulMathew)
 
 ~~~~~~Venom 8.8
+*Compiled with Linaro (GCC-4.9.4)
 *Updated to latest LineageOS/Boeffla Sources as of 10.07.17
-*Added QuickWakeup
 *ZZmoves adjustment to acommodate Overclocking (Thanks to Legitsu)
-*Fixed intelli-thermal
-*Added Adreno Idler
-*Compiled with Linaro 4.9.4
+*Added Adreno Idler (Thanks to Arter97/SunilPaulMathew/CrazyGamer)
+*Fixed Intelli-Thermal.V2
+*Added QuickWakeup
+
+~~~~~~Venom 8.8
+*Incorporated fbs's modified (ALMK)Low Memory Killer
+*Added Mako Hotplugging
+*Fixed Recurring NFC Bug (KLTESPR Devices)
 
