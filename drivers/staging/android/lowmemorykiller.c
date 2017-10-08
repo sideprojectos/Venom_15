@@ -1,5 +1,7 @@
 /* drivers/misc/lowmemorykiller.c
  *
+ * Modified ALMK (fbs @XDA)
+ *
  * The lowmemorykiller driver lets user-space specify a set of memory thresholds
  * where processes with a range of oom_score_adj values will get killed. Specify
  * the minimum oom_score_adj values in
@@ -27,7 +29,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  */
 
 /* patch to work with an interval instead of kernel's pressure algorithm
