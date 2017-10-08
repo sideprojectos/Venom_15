@@ -5,6 +5,9 @@
 # Version 1.3, 11.10.2016
 #
 # (C) Lord Boeffla (aka andip71)
+#
+# Modified by The~Skater~187
+# For Boeffla~Venom~Kernel
 
 #######################################
 # Parameters to be configured manually
