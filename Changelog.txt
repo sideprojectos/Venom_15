@@ -1,7 +1,4 @@
-           187-Mod
 ********Venom Changelog***********
-        The~Skater~187
-
 *Initial Release (With Huge Help To Lord Boeffla)
 *Modified some scripting
 *Changed ZRAM compression to LZO
@@ -126,8 +123,12 @@
 *Fixed Intelli-Thermal.V2
 *Added QuickWakeup
 
-~~~~~~Venom 8.8
-*Incorporated fbs's modified (ALMK)Low Memory Killer
+~~~~~~Venom 8.9
+*Upstream to Linux 3.4.117
 *Added Mako Hotplugging
+*Enable Cortex_A15 Optimization
 *Fixed Recurring NFC Bug (KLTESPR Devices)
+*Incorporated fbs's modified (ALMK)Low Memory Killer
+
+
 
