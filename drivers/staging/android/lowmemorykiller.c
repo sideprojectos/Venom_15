@@ -1,7 +1,5 @@
 /* drivers/misc/lowmemorykiller.c
  *
- * Modified ALMK (fbs @XDA)
- *
  * The lowmemorykiller driver lets user-space specify a set of memory thresholds
  * where processes with a range of oom_score_adj values will get killed. Specify
  * the minimum oom_score_adj values in
@@ -29,7 +27,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  */
 
 /* patch to work with an interval instead of kernel's pressure algorithm
@@ -65,7 +63,7 @@
 #define _ZONE ZONE_NORMAL
 #endif
 
-static uint32_t lowmem_debug_level = 1;
+static uint32_t lowmem_debug_level = 5;
 static int lowmem_adj[6] = {
 	0,
 	1,
@@ -81,7 +79,7 @@ static int lowmem_minfree[6] = {
 };
 static int lowmem_minfree_size = 4;
 static int lmk_fast_run = 1;
-static int lowmemint = 2000;
+static int lowmemint = 1000;
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -326,8 +324,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int i;
 	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
 	int minfree = 0;
-	int selected_tasksize = 0;
-	int selected_oom_score_adj;
+	int selected_oom_score;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_file;
 
@@ -336,14 +333,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 
 	other_file = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM)
-		- global_page_state(NR_UNEVICTABLE) - total_swapcache_pages();
+		- global_page_state(NR_UNEVICTABLE);
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
-
-	restart:
 
 	for (i = array_size; i >= 0; i--) {
 		minfree = lowmem_minfree[i];
@@ -355,22 +350,23 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 	if (i < 0) {
 		lowmem_print(5, "i < 0. min_score_adj = %d. We still have %u pages in cache", min_score_adj, other_file);
-		mutex_unlock(&scan_mutex);
-		return 0;
+		lowmemint = 1000;
+		goto out;
 	}
 
-	if (i && other_file < lowmem_minfree[i-1]) {
-		lowmemint = 100;
-		printk(KERN_INFO "lowmemorykiller: A sudden usage of too much RAM! Going fast!");
+	if (lowmemint != 200 && other_file < lowmem_minfree[i-1]) {
+		lowmemint = 200;
+		lowmem_print(1, "A sudden usage of too much RAM! Going fast!");
 	}
-	else lowmemint = 2000;
 
-	selected_oom_score_adj = min_score_adj;
+	restart:
+	selected = NULL;
+
+	selected_oom_score = min_score_adj;
 
 	rcu_read_lock();
 	for_each_process(tsk) {
-		struct task_struct *p;
-		int oom_score_adj;
+		int oom_score = 0;
 
 		if (tsk->flags & PF_KTHREAD)
 			continue;
@@ -379,47 +375,36 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (test_task_flag(tsk, TIF_MM_RELEASED))
 			continue;
 
-		if (test_task_flag(tsk, TIF_MEMDIE)) {
-			rcu_read_unlock();
-			/* give the system time to free up the memory */
-			msleep_interruptible(20);
-			mutex_unlock(&scan_mutex);
-			return 0;
-		}
-
-		p = find_lock_task_mm(tsk);
-		if (!p)
+		if (test_task_flag(tsk, TIF_MEMDIE))
 			continue;
 
-		oom_score_adj = p->signal->oom_score_adj;
-		if (oom_score_adj < min_score_adj) {
-			task_unlock(p);
+		oom_score = oom_badness(tsk, NULL, NULL, totalram_pages + total_swap_pages);
+
+		if (!oom_score || oom_score < min_score_adj)
 			continue;
-		}
-		tasksize = get_mm_rss(p->mm);
-		task_unlock(p);
-		if (tasksize <= 0)
-			continue;
-		if (selected) {
-			if (oom_score_adj < selected_oom_score_adj)
+
+		if (selected)
+			if (oom_score < selected_oom_score)
 				continue;
-			if (oom_score_adj == selected_oom_score_adj && tasksize <= selected_tasksize)
-				continue;
-		}
-		selected = p;
-		selected_tasksize = tasksize;
-		selected_oom_score_adj = oom_score_adj;
-		lowmem_print(3, "select '%s' (%d), adj %hd, size %d, to kill\n", p->comm, p->pid, oom_score_adj, tasksize);
+
+		selected = tsk;
+		selected_oom_score = oom_score;
+		tasksize = get_mm_rss(tsk->mm);
+
+		lowmem_print(3, "Found '%s' (%d), adj %hd, size %d, to kill", tsk->comm, tsk->pid, oom_score, tasksize);
 	}
 	if (!selected) {
-		lowmem_print(4, "Nothing to kill. advancing to adj %d", lowmem_adj[--array_size]);
-		rcu_read_unlock();
+                rcu_read_unlock();
+                if (i>0)
+			min_score_adj = lowmem_adj[--i];
+                else goto out;
+		lowmem_print(4, "Nothing to kill. Advancing to %d", min_score_adj);
 		goto restart;
 	}
 	else {
-		lowmem_print(1, "Killing '%s' (%d), adj %d,\n" \
+		lowmem_print(1, "Killing '%s' (%d), score %d,\n" \
 				"   to free %ldkB on behalf of '%s' (%d) because\n"
-				"   cache %ldkB is below limit %ldkB for oom_score_adj %hd\n" \
+				"   cache %ldkB is below limit %ldkB for adj %hd\n" \
 				"   Free CMA is %ldkB\n" \
 				"   Total reserve is %ldkB\n" \
 				"   Total free pages is %ldkB\n" \
@@ -429,8 +414,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				"   Total Slab is %ldkB\n" \
 				"   GFP mask is 0x%x\n",
 				selected->comm, selected->pid,
-				selected_oom_score_adj,
-				selected_tasksize * (long)(PAGE_SIZE / 1024),
+				selected_oom_score,
+				get_mm_rss(selected->mm) * (long)(PAGE_SIZE / 1024),
 				current->comm, current->pid,
 				other_file * (long)(PAGE_SIZE / 1024),
 				minfree * (long)(PAGE_SIZE / 1024),
@@ -456,7 +441,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				0x0);
 #endif
 
-		if (lowmem_debug_level >= 2 && selected_oom_score_adj == 0) {
+		if (lowmem_debug_level >= 2 && selected_oom_score <= 0) {
 			show_mem(SHOW_MEM_FILTER_NODES);
 			dump_tasks(NULL, NULL);
 			show_mem_call_notifiers();
@@ -469,6 +454,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		msleep_interruptible(20);
 	}
 
+	out:
 	mutex_unlock(&scan_mutex);
 	return 0;
 }
