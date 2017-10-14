@@ -124,6 +124,7 @@
 *Added QuickWakeup
 
 ~~~~~~Venom 8.9
+*Updated to latest LineageOS/Boeffla Sources as of 10.13.17
 *Upstream to Linux 3.4.117
 *Added Mako Hotplugging
 *Enable Cortex_A15 Optimization
